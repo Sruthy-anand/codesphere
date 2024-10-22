@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth import User
+from django.contrib.auth.models import User
 from embed_video.fields import EmbedVideoField
 
 
@@ -12,9 +12,9 @@ class BaseModel(models.Model):
 
 class UserProfile(BaseModel):
 
-    bio=models.CharField(max_length=200)
-    prof_picture=models.ImageField(upload_to="profilepicture",null=True,blank=True)
-    phone=models.CharField(max_length=200)
+    bio=models.CharField(max_length=200,null=True)
+    prof_picture=models.ImageField(upload_to="profilepicture",null=True,blank=True,default="profilepicture/default.png")
+    phone=models.CharField(max_length=200,null=True)
     owner=models.OneToOneField(User,on_delete=models.CASCADE,related_name="profile")
 
     def __str__(self) ->str:
@@ -50,7 +50,7 @@ class WishList(BaseModel):
     
 
 class WishListItem(BaseModel):
-    wishlist_object=models.ForeignKey(WishList,on_delete=models.CASCADE,related_name="basket-items")
+    wishlist_object=models.ForeignKey(WishList,on_delete=models.CASCADE,related_name="basket_item")
     project_object=models.ForeignKey(Project,on_delete=models.CASCADE)
     is_order_placed=models.BooleanField(default=False)
 
@@ -58,3 +58,22 @@ class Order(BaseModel):
     wishlist_item_objects=models.ManyToManyField(WishListItem)
     is_paid=models.BooleanField(default=False)
     order_id=models.CharField(max_length=200,null=True)
+
+
+
+# django.db.signals post_save,pre_save,post_init
+from django.db.models.signals import post_save
+def create_user_profile(sender,instance,created,**kwargs):
+
+    if created:
+        UserProfile.objects.create(owner=instance)
+
+post_save.connect(create_user_profile,User)
+
+
+def create_wishlist(sender,instance,created,**kwargs):
+    
+    if created:
+        WishList.objects.create(owner=instance)
+
+post_save.connect(create_wishlist,sender=User)
