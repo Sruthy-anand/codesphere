@@ -1,12 +1,14 @@
 from django.shortcuts import render,redirect
 
-from store.forms import SignUpForm,SignInForm,UserProfileForm
+from store.forms import SignUpForm,SignInForm,UserProfileForm,ProjectForm
 
 from django.contrib.auth import authenticate,login,logout
 
 from django.urls import reverse_lazy
 
 from django.views.generic import View,FormView,CreateView,TemplateView
+
+from store.models import Project
 
 class SignUpView(CreateView):
 
@@ -64,9 +66,15 @@ class SignInView(FormView):
             
             return render(request,self.template_name,{"form":form_instance})
 
-class IndexView(TemplateView):
+class IndexView(View):
 
     template_name="index.html"
+    
+    def get(self,request,*args,**kwargs):
+
+        qs=Project.objects.all().exclude(developer=request.user)
+
+        return render(request,self.template_name,{"data":qs})
 
 
 class LogOutView(View):
@@ -111,7 +119,71 @@ class UserProfileEditView(View):
             return redirect("index")
         
         return render(request,self.template_name,{"form":form_instance})
+    
 
 
+class ProjectCreateView(View):
+
+    template_name="project_add.html"
+    form_class=ProjectForm
+
+    def get(self,request,*args,**kwargs):
+
+        form_instance=self.form_class()
+        return render(request,self.template_name,{"form":form_instance})
+    
+    def post(self,request,*args,**kwargs):
+
+        form_instance=self.form_class(request.POST,files=request.FILES)
+
+        if form_instance.is_valid():
+
+            form_instance.instance.developer=request.user
+
+            form_instance.save()
+
+            return redirect("index")
+        
+        return render(request,self.template_name,{"form":form_instance})
+    
+class MyProjectListView(View):
+
+    template_name="my_project.html"
+
+    def get(self,request,*args,**kwargs):
+
+        qs=Project.objects.filter(developer=request.user)
+
+        return render(request,self.template_name,{"data":qs})
+    
+
+class ProjectUpdateView(View):
+
+    template_name="project_update.html"
+
+    form_class=ProjectForm
+
+    def get(self,request,*args,**kwargs):
+
+        id=kwargs.get("pk")
+
+        project_object=Project.objects.get(id=id)
+
+        form_instance=self.form_class(instance=project_object)
+
+        return render(request,self.template_name,{"form":form_instance})
+    
+    def post(self,request,*args,**kwargs):
+
+        id=kwargs.get("pk")
+
+        project_object=Project.objects.get(id=id)
+        form_instance=self.form_class(request.POST,instance=project_object,files=request.FILES)
+
+        if form_instance.is_valid():
+
+            form_instance.save()
+
+            return redirect("myworks")
 
 
